@@ -1,17 +1,17 @@
+P = 0
+R = 0
+V = 0
+
+travel_time_matrix = []
+requests = []
+vehicles = []
 
 def main():
-    P = 0
-    R = 0
-    V = 0
-    p = 0
-    r = 0
-    v = 0
-
-    travel_time_matrix = []
-    requests = []
-    vehicles = []
     with open('input.txt') as fp:
         lines = fp.readlines()
+        p = 0
+        r = 0
+        v = 0
         for line in lines:
             if p > 0:
                 travel_time_matrix[P - p - 1] = [0] * (P - p) + [int(x) for x in line.split(' ') if x]
@@ -36,12 +36,6 @@ def main():
     print(travel_time_matrix)
     print(requests)
     print(vehicles)
-
-
-                
-
-                
-
 
 
 if __name__ == '__main__':
