@@ -1,7 +1,7 @@
 from fleetproblem import FleetProblem
 
 def main():
-    fp = FleetProblem('input.txt')
+    fp = FleetProblem(open('input.txt'))
     
     print(fp.travel_time_matrix)
     print(fp.requests)
