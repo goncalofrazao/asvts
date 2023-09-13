@@ -18,9 +18,12 @@ def main():
     # for line in fp.travel_time_matrix:
     #     print(line)
 
-    sol = read_solution(open('output.txt'))
+    # sol = read_solution(open('output.txt'))
 
-    print(fp.cost(sol))
+    # print(fp.cost(sol))
+    state, cost = fp.init_solve()
+    print(state.actions)
+    print(cost)
 
     
 

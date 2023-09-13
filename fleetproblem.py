@@ -1,18 +1,120 @@
+class Vehicle:
+    def __init__(self, id, capacity):
+        self.id = id
+        self.capacity = capacity
+        self.requests = {}
+        self.time = 0
+        self.position = 0
+    
+    def passengers(self):
+        passengers = 0
+        for request in self.requests.values():
+            passengers += request[3]
+        return passengers
+    
+    def calculate_pickup_time(self, request, matrix):
+        if self.time + matrix[self.position][request[1]] >= request[0]:
+            return self.time + matrix[self.position][request[1]]
+        else:
+            return request[0]
+
+    def calculate_dropoff_time(self, request, matrix):
+        return self.time + matrix[self.position][request[2]]
+
+    def dropoffs(self, matrix):
+        dropoffs = []
+        for key, request in self.requests.items():
+            dropoffs.append(('Dropoff', self.id, key, self.calculate_dropoff_time(request, matrix)))
+        return dropoffs
+    
+    def drop(self, action):
+        request = self.requests[action[2]]
+        self.position = request[2]
+        self.time = action[3]
+        self.requests.pop(action[2])
+
+    def pick(self, action, request):
+        self.position = request[1]
+        self.time = action[3]
+        self.requests[action[2]] = request
+
+    def copy(self):
+        new_vehicle = Vehicle(self.id, self.capacity)
+        new_vehicle.requests = self.requests.copy()
+        new_vehicle.time = self.time
+        new_vehicle.position = self.position
+        return new_vehicle
+
+class State:
+    def __init__(self, requests, vehicles, matrix):
+        self.requests = {i: request for i, request in enumerate(requests)}
+        self.vehicles = [Vehicle(i, capacity) for i,capacity in enumerate(vehicles)]
+        self.actions = []
+        self.matrix = matrix
+
+    def get_possible_actions(self):
+        actions = []
+        for i, vehicle in enumerate(self.vehicles):
+            actions += vehicle.dropoffs(self.matrix)
+            for key, request in self.requests.items():
+                if vehicle.passengers() + request[3] <= vehicle.capacity:
+                    actions.append(('Pickup', i, key, vehicle.calculate_pickup_time(request, self.matrix)))
+        return actions
+    
+    def update(self, action):
+        vehicle = self.vehicles[action[1]]
+        if action[0] == 'Dropoff':
+            vehicle.drop(action)
+        elif action[0] == 'Pickup':
+            vehicle.pick(action, self.requests[action[2]])
+            self.requests.pop(action[2])
+
+        self.actions.append(action)
+    
+    def copy(self):
+        new_state = State([], [], [])
+        new_state.requests = self.requests.copy()
+        new_state.vehicles = [vehicle.copy() for vehicle in self.vehicles]
+        new_state.actions = self.actions.copy()
+        new_state.matrix = self.matrix.copy()
+        return new_state
+
 class FleetProblem:
     def __init__(self, fh=None):
         self.P = 0
         self.R = 0
         self.V = 0
-        self.travel_time_matrix = []
+        self.matrix = []
         self.requests = []
         self.vehicles = []
         if fh:
             self.load(fh)
     
+    def init_solve(self):
+        state = State(self.requests, self.vehicles, self.matrix)
+        sol = self.solve(state)
+        return sol
+
+    def solve(self, state):
+        best_state = []
+        best_cost = -1
+        actions = state.get_possible_actions()
+        if not actions:
+            return state, self.cost(state.actions)
+        else:
+            for action in actions:
+                new_state = state.copy()
+                new_state.update(action)
+                new_state, new_cost = self.solve(new_state)
+                if new_cost <= best_cost or best_cost == -1:
+                    best_cost = new_cost
+                    best_state = new_state
+            return best_state, best_cost
+    
     def matrix_triangulation(self):
         for i in range(self.P):
             for j in range(i + 1, self.P):
-                self.travel_time_matrix[j][i] = self.travel_time_matrix[i][j]
+                self.matrix[j][i] = self.matrix[i][j]
 
     def load(self, fh):
         self.__init__()
@@ -21,7 +123,7 @@ class FleetProblem:
         v = 0
         for line in fh:
             if p > 0:
-                self.travel_time_matrix[self.P - p - 1] = [0] * (self.P - p) + [int(x) for x in line.split(' ') if x]
+                self.matrix[self.P - p - 1] = [0] * (self.P - p) + [int(x) for x in line.split(' ') if x]
                 p -= 1
             elif r > 0:
                 self.requests.append([int(x) for x in line.split(' ')])
@@ -31,7 +133,7 @@ class FleetProblem:
                 v -= 1
             elif line.startswith('P'):
                 self.P = int(line[2:])
-                self.travel_time_matrix = [[0] * self.P] * self.P
+                self.matrix = [[0] * self.P] * self.P
                 p = self.P - 1
             elif line.startswith('R'):
                 self.R = int(line[2:])
@@ -41,16 +143,6 @@ class FleetProblem:
                 v = self.V
         
         self.matrix_triangulation()
-
-    # def cost1(self, sol):
-    #     cost = 0
-    #     for i in sol:
-    #         if i[0] == 'Pickup':
-    #             tp = i[3]
-    #             t = self.requests[i[2]][0]
-    #             cost += tp - t
-        
-    #     return cost
 
     def get_dropoff_time(self, action):
         return action[3]
@@ -63,7 +155,7 @@ class FleetProblem:
     
     def get_trip_time(self, action):
         request = self.requests[action[2]]
-        return self.travel_time_matrix[request[1]][request[2]]
+        return self.matrix[request[1]][request[2]]
     
     def cost(self, sol):
         cost = 0
@@ -73,4 +165,3 @@ class FleetProblem:
         
         return cost
     
-
