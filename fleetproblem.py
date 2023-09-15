@@ -108,11 +108,8 @@ class FleetProblem:
         
         actions = state.get_possible_actions()
         if actions:
-            # actions = sorted(actions, key=lambda action: self.heuristic(action))
-            # print(actions)
-            # print()
+            actions = sorted(actions, key=lambda action: self.heuristic(action))
             for action in actions:
-                # self.solve(state.copy().update(action))
                 new_state = state.copy()
                 new_state.update(action)
                 self.solve(new_state)
