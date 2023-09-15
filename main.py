@@ -1,4 +1,5 @@
 from fleetproblem import FleetProblem
+import sys
 
 def read_solution(fh):
     solution = []
@@ -9,7 +10,8 @@ def read_solution(fh):
     return solution
 
 def main():
-    fp = FleetProblem(open('input.txt'))
+    args = sys.argv
+    fp = FleetProblem(open(args[1]))
     
     # print(fp.travel_time_matrix)
     # print(fp.requests)
@@ -19,14 +21,15 @@ def main():
     #     print(line)
 
     # sol = read_solution(open('output.txt'))
-
     # print(fp.cost(sol))
-    state, cost = fp.init_solve()
-    print(state.actions)
-    print(cost)
 
-    
-
+    fp.init_solve()
+    # if FleetProblem.best_state:
+    #     print(FleetProblem.best_state.actions)
+    # else:
+    #     print(FleetProblem.best_state)
+    print('cost: ', FleetProblem.best_cost)
+    print('counter: ', FleetProblem.counter)
 
 if __name__ == '__main__':
     main()
