@@ -22,12 +22,10 @@ def main():
 
     # sol = read_solution(open('output.txt'))
     # print(fp.cost(sol))
-
-    fp.init_solve()
-    # if FleetProblem.best_state:
-    #     print(FleetProblem.best_state.actions)
-    # else:
-    #     print(FleetProblem.best_state)
+    # fp.init_solve()
+    fp.iterative_solve()
+    if FleetProblem.best_state:
+        print(FleetProblem.best_state.actions)
     print('cost: ', FleetProblem.best_cost)
     print('counter: ', FleetProblem.counter)
 

@@ -82,7 +82,6 @@ class State:
 class FleetProblem:
     best_cost = -1
     best_state = None
-    counter = 0
 
     def __init__(self, fh=None):
         self.P = 0
@@ -114,11 +113,40 @@ class FleetProblem:
                 new_state.update(action)
                 self.solve(new_state)
         elif this_iteration_cost <= FleetProblem.best_cost or FleetProblem.best_cost == -1:
-            # print(state.actions, this_iteration_cost)
-            # print('\n')
-            FleetProblem.counter += 1
             FleetProblem.best_cost = this_iteration_cost
             FleetProblem.best_state = state
+
+    def iterative_solve(self):
+        state = State(self.requests, self.vehicles, self.matrix)
+        queue = []
+        actions = state.get_possible_actions()
+        actions = sorted(actions, key=lambda action: self.heuristic(action))
+        actions.reverse()
+        for action in actions:
+            new_state = state.copy()
+            new_state.update(action)
+            queue.append(new_state)
+
+        while queue:
+            state = queue.pop()
+            this_iteration_cost = self.cost(state.actions)
+
+            if FleetProblem.best_cost != -1 and this_iteration_cost > FleetProblem.best_cost:
+                continue
+            
+            actions = state.get_possible_actions()
+            if actions:
+                actions = sorted(actions, key=lambda action: self.heuristic(action))
+                actions.reverse()
+                for action in actions:
+                    new_state = state.copy()
+                    new_state.update(action)
+                    queue.append(new_state)
+                
+            elif this_iteration_cost <= FleetProblem.best_cost or FleetProblem.best_cost == -1:
+                FleetProblem.best_state = state
+                FleetProblem.best_cost = this_iteration_cost
+
 
     def matrix_triangulation(self):
         for i in range(self.P):
