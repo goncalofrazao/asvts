@@ -19,10 +19,10 @@ class FleetProblem(search.Problem):
         v = 0
         for line in fh:
             if p > 0:
-                self.matrix[self.P - p - 1] = [0] * (self.P - p) + [float(x) for x in line.split(' ') if x]
+                self.matrix[self.P - p - 1] = [0] * (self.P - p) + [float(x) for x in line.split()]
                 p -= 1
             elif r > 0:
-                self.requests.append([float(line.split(' ')[0])] + [int(x) for x in line.split(' ')[1:]])
+                self.requests.append([float(line.split()[0])] + [int(x) for x in line.split()[1:]])
                 r -= 1
             elif v > 0:
                 self.vehicles.append(int(line))
