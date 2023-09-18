@@ -1,6 +1,6 @@
-from fleetproblem import FleetProblem
+# from fleetproblem import FleetProblem
 import sys
-
+from solution import FleetProblem
 def read_solution(fh):
     solution = []
     lines = fh.readlines()
@@ -13,21 +13,20 @@ def main():
     args = sys.argv
     fp = FleetProblem(open(args[1]))
     
-    # print(fp.travel_time_matrix)
-    # print(fp.requests)
-    # print(fp.vehicles)
+    # print(fp.matrix)
+    print(fp.requests)
+    print(fp.vehicles)
 
-    # for line in fp.travel_time_matrix:
-    #     print(line)
-
+    for line in fp.matrix:
+        print(line)
+    print(fp.cost([('Dropoff', 0, 0, 60.0), ('Pickup', 0, 0, 20.0)]))
     # sol = read_solution(open('output.txt'))
     # print(fp.cost(sol))
     # fp.init_solve()
-    fp.iterative_solve()
-    if FleetProblem.best_state:
-        print(FleetProblem.best_state.actions)
-    print('cost: ', FleetProblem.best_cost)
-    print('counter: ', FleetProblem.counter)
+    # fp.iterative_solve()
+    # if FleetProblem.best_state:
+    #     print(FleetProblem.best_state.actions)
+    # print('cost: ', FleetProblem.best_cost)
 
 if __name__ == '__main__':
     main()
