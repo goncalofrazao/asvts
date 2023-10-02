@@ -41,6 +41,39 @@ Todo:
 
 import search
 
+class Vehicle:
+    def __init__(self):
+        self.ocuppation = 0
+        self.time = 0
+        self.position = 0
+
+    def copy(self):
+        new_vehicle = Vehicle()
+        new_vehicle.ocuppation = self.ocuppation
+        new_vehicle.time = self.time
+        new_vehicle.position = self.position
+        return new_vehicle
+    
+    def update(self, ocuppation, time, position):
+        self.ocuppation += ocuppation
+        self.time = time
+        self.position = position
+
+class State:
+    def __init__(self, requests, vehicles):
+        self.pickups = {i: request for i, request in enumerate(requests)}
+        self.dropoffs = [{} for _ in range(vehicles)]
+        self.path = []
+        self.vehicles = [Vehicle() for _ in range(vehicles)]
+    
+    def copy(self):
+        new_state = State([], 0)
+        new_state.pickups = self.pickups.copy()
+        new_state.dropoffs = [i.copy() for i in self.dropoffs]
+        new_state.path = self.path.copy()
+        new_state.vehicles = [i.copy() for i in self.vehicles]
+        return new_state
+
 class FleetProblem(search.Problem):
     
     def __init__(self, fh=None):
@@ -181,3 +214,34 @@ class FleetProblem(search.Problem):
                 cost += self.get_dropoff_time(action) - self.get_request_time(action) - self.get_trip_time(action)
         
         return cost
+    
+    def result(self, state, action):
+        r = action[2]
+        vehicle = action[1]
+        new_state = state.copy()
+        if action[0] == 'Pickup':
+            request = new_state.pickups.pop(r)
+            new_state.dropoffs[vehicle][r] = request
+            new_state.path.append(action)
+            new_state.vehicles[vehicle].update(request[3], action[3], request[1])
+        elif action[0] == 'Dropoff':
+            request = new_state.dropoffs[vehicle].pop(r)
+            new_state.path.append(action)
+            new_state.vehicles[vehicle].update(-request[3], action[3], request[2])
+        return new_state
+
+    def actions(self, state):
+        actions = []
+        for i, vehicle in enumerate(state.vehicles):
+            for r, request in state.pickups.items():
+                if vehicle.ocuppation + request[3] <= self.vehicles[i]:
+                    time = vehicle.time + self.matrix[vehicle.position][request[1]]
+                    actions.append(('Pickup', i, r, time if time > request[0] else request[0]))
+        for i, vehicle in enumerate(state.vehicles):
+            for r, request in state.dropoffs[i].items():
+                time = vehicle.time + self.matrix[vehicle.position][request[2]]
+                actions.append(('Dropoff', i, r, time))
+        return actions
+    
+    def goal_test(self, state):
+        return not state.pickups and not any(state.dropoffs)

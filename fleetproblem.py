@@ -1,4 +1,5 @@
 import search
+import heapq
 
 class Vehicle:
     def __init__(self, id, capacity):
@@ -72,7 +73,14 @@ class State:
             self.requests.pop(action[2])
 
         self.actions.append(action)
-    
+
+    def __lt__(self, other):
+        return len(self.actions) < len(other.actions)
+
+    def __eq__(self, other):
+        return len(self.actions) == len(other.actions)
+        
+
     def copy(self):
         new_state = State([], [], [])
         new_state.requests = self.requests.copy()
@@ -128,26 +136,34 @@ class FleetProblem(search.Problem):
             new_state = state.copy()
             new_state.update(action)
             queue.append(new_state)
+            # heapq.heappush(queue, (self.heuristic(action) + self.cost(new_state.actions), new_state))
 
         while queue:
             state = queue.pop()
             this_iteration_cost = self.cost(state.actions)
-
+            # _, state = heapq.heappop(queue)
+            # this_iteration_cost = self.cost(state.actions)
+            
             if FleetProblem.best_cost != -1 and this_iteration_cost > FleetProblem.best_cost:
                 continue
             
             actions = state.get_possible_actions()
             if actions:
+                
                 actions = sorted(actions, key=lambda action: self.heuristic(action))
                 actions.reverse()
+
                 for action in actions:
                     new_state = state.copy()
                     new_state.update(action)
                     queue.append(new_state)
+                    # heapq.heappush(queue, (self.heuristic(action) + self.cost(new_state.actions), new_state))
                 
             elif this_iteration_cost <= FleetProblem.best_cost or FleetProblem.best_cost == -1:
                 FleetProblem.best_state = state
                 FleetProblem.best_cost = this_iteration_cost
+                if this_iteration_cost == 144:
+                    return
 
 
     def matrix_triangulation(self):
@@ -203,4 +219,3 @@ class FleetProblem(search.Problem):
                 cost += self.get_dropoff_time(action) - self.get_request_time(action) - self.get_trip_time(action)
         
         return cost
-    
