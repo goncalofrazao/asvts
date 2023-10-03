@@ -65,7 +65,7 @@ class State:
         self.dropoffs = [{} for _ in range(vehicles)]
         self.path = []
         self.vehicles = [Vehicle() for _ in range(vehicles)]
-    
+
     def copy(self):
         new_state = State([], 0)
         new_state.pickups = self.pickups.copy()
@@ -73,6 +73,15 @@ class State:
         new_state.path = self.path.copy()
         new_state.vehicles = [i.copy() for i in self.vehicles]
         return new_state
+    
+    # def __lt__(self, other):
+    #     return len(self.path) < len(other.path)
+    
+    # def __eq__(self, other):
+    #     return len(self.path) == len(other.path)
+    
+    # def __hash__(self):
+    #     return hash(tuple(self.path))
 
 class FleetProblem(search.Problem):
     
@@ -90,6 +99,7 @@ class FleetProblem(search.Problem):
         self.matrix = []
         self.requests = []
         self.vehicles = []
+        self.initial = State([], 0)
         if fh:
             self.load(fh)
 
@@ -136,6 +146,7 @@ class FleetProblem(search.Problem):
                 v = self.V
         
         self.matrix_triangulation()
+        self.initial = State(self.requests, len(self.vehicles))
     
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
@@ -245,3 +256,9 @@ class FleetProblem(search.Problem):
     
     def goal_test(self, state):
         return not state.pickups and not any(state.dropoffs)
+
+    def path_cost(self, c, state1, action, state2):
+        return self.cost(state2.path)
+
+    def solve(self):
+        return search.depth_first_graph_search(self).state

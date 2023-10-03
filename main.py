@@ -51,14 +51,20 @@ def main():
     # for i in state3.vehicles:
     #     print(i.ocuppation, i.time, i.position)
 
-    state = State(fp.requests, len(fp.vehicles))
-    actions = fp.actions(state)
-    print(actions)
-    while actions:
-        state = fp.result(state, actions[0])
-        actions = fp.actions(state)
-        print(actions)
-    print(fp.goal_test(state))
+    # state = State(fp.requests, len(fp.vehicles))
+    # actions = fp.actions(state)
+    # print(actions)
+    # while actions:
+    #     state = fp.result(state, actions[0])
+    #     actions = fp.actions(state)
+    #     print(actions)
+    # print(fp.goal_test(state))
+
+    state = fp.solve()
+    print(state.path)
+    print(fp.cost(state.path))
+
+
 
 
 if __name__ == '__main__':
