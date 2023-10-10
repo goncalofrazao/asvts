@@ -42,17 +42,13 @@ Todo:
 import search
 
 class Vehicle:
-    def __init__(self):
-        self.ocuppation = 0
-        self.time = 0
-        self.position = 0
+    def __init__(self, ocuppation=0, time=0, position=0):
+        self.ocuppation = ocuppation
+        self.time = time
+        self.position = position
 
     def copy(self):
-        new_vehicle = Vehicle()
-        new_vehicle.ocuppation = self.ocuppation
-        new_vehicle.time = self.time
-        new_vehicle.position = self.position
-        return new_vehicle
+        return Vehicle(self.ocuppation, self.time, self.position)
     
     def update(self, ocuppation, time, position):
         self.ocuppation += ocuppation
@@ -60,28 +56,23 @@ class Vehicle:
         self.position = position
 
 class State:
-    def __init__(self, requests, vehicles):
-        self.pickups = {i: request for i, request in enumerate(requests)}
-        self.dropoffs = [{} for _ in range(vehicles)]
-        self.path = []
-        self.vehicles = [Vehicle() for _ in range(vehicles)]
+    def __init__(self, picks, drops, vehicles):
+        self.picks = picks
+        self.drops = drops
+        self.vehicles = vehicles
 
-    def copy(self):
-        new_state = State([], 0)
-        new_state.pickups = self.pickups.copy()
-        new_state.dropoffs = [i.copy() for i in self.dropoffs]
-        new_state.path = self.path.copy()
-        new_state.vehicles = [i.copy() for i in self.vehicles]
-        return new_state
+    def __lt__(self, other):
+        return len(self.picks) < len(other.picks)
     
-    # def __lt__(self, other):
-    #     return len(self.path) < len(other.path)
+    def __eq__(self, other):
+        picks1 = sorted(self.picks)
+        drops1 = sorted(self.drops)
+        picks2 = sorted(other.picks)
+        drops2 = sorted(other.drops)
+        return picks1 == picks2 and drops1 == drops2
     
-    # def __eq__(self, other):
-    #     return len(self.path) == len(other.path)
-    
-    # def __hash__(self):
-    #     return hash(tuple(self.path))
+    def __hash__(self):
+        return hash((tuple(sorted(self.picks)), tuple(sorted(self.drops))))
 
 class FleetProblem(search.Problem):
     
@@ -99,7 +90,7 @@ class FleetProblem(search.Problem):
         self.matrix = []
         self.requests = []
         self.vehicles = []
-        self.initial = State([], 0)
+        self.initial = None
         if fh:
             self.load(fh)
 
@@ -146,7 +137,7 @@ class FleetProblem(search.Problem):
                 v = self.V
         
         self.matrix_triangulation()
-        self.initial = State(self.requests, len(self.vehicles))
+        self.initial = State(tuple(i for i in range(self.R)), tuple(), [Vehicle() for i in range(self.V)])
     
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
@@ -160,7 +151,7 @@ class FleetProblem(search.Problem):
             for j in range(i + 1, self.P):
                 self.matrix[j][i] = self.matrix[i][j]
     
-    def get_dropoff_time(self, action):
+    def get_action_time(self, action):
         """Returns the dropoff time of an action.
 
         Args:
@@ -222,43 +213,56 @@ class FleetProblem(search.Problem):
         cost = 0
         for action in sol:
             if self.is_dropoff(action):
-                cost += self.get_dropoff_time(action) - self.get_request_time(action) - self.get_trip_time(action)
+                cost += self.get_action_time(action) - self.get_request_time(action) - self.get_trip_time(action)
         
         return cost
     
     def result(self, state, action):
-        r = action[2]
+        request = action[2]
         vehicle = action[1]
-        new_state = state.copy()
+        
         if action[0] == 'Pickup':
-            request = new_state.pickups.pop(r)
-            new_state.dropoffs[vehicle][r] = request
-            new_state.path.append(action)
-            new_state.vehicles[vehicle].update(request[3], action[3], request[1])
+            picks = tuple(i for i in state.picks if i != request)
+            drops = state.drops + ((request, vehicle, action[3]),)
+            vehicles = [i.copy() for i in state.vehicles]
+            vehicles[vehicle].update(self.requests[request][3], action[3], self.requests[request][1])
+            return State(picks, drops, vehicles)
         elif action[0] == 'Dropoff':
-            request = new_state.dropoffs[vehicle].pop(r)
-            new_state.path.append(action)
-            new_state.vehicles[vehicle].update(-request[3], action[3], request[2])
-        return new_state
-
+            drops = tuple(i for i in state.drops if i[0] != request)
+            vehicles = [i.copy() for i in state.vehicles]
+            vehicles[vehicle].update(-self.requests[request][3], action[3], self.requests[request][2])
+            return State(state.picks, drops, vehicles)
+        return None
+    
     def actions(self, state):
         actions = []
+        
+        for r in state.drops:
+            request = self.requests[r[0]]
+            vehicle = state.vehicles[r[1]]
+            time = vehicle.time + self.matrix[vehicle.position][request[2]]
+            actions.append(('Dropoff', r[1], r[0], time))
         for i, vehicle in enumerate(state.vehicles):
-            for r, request in state.pickups.items():
+            for r in state.picks:
+                request = self.requests[r]
                 if vehicle.ocuppation + request[3] <= self.vehicles[i]:
                     time = vehicle.time + self.matrix[vehicle.position][request[1]]
                     actions.append(('Pickup', i, r, time if time > request[0] else request[0]))
-        for i, vehicle in enumerate(state.vehicles):
-            for r, request in state.dropoffs[i].items():
-                time = vehicle.time + self.matrix[vehicle.position][request[2]]
-                actions.append(('Dropoff', i, r, time))
         return actions
     
     def goal_test(self, state):
-        return not state.pickups and not any(state.dropoffs)
+        return not state.picks and not any(state.drops)
 
     def path_cost(self, c, state1, action, state2):
-        return self.cost(state2.path)
+        if not self.is_dropoff(action):
+            return c + self.get_action_time(action) - self.get_request_time(action)
+        else:
+            pickup_time = 0
+            for i in state1.drops:
+                if i[0] == action[2]:
+                    pickup_time = i[2]
+                    break
+            return c + self.get_action_time(action) - pickup_time - self.get_trip_time(action)
 
     def solve(self):
-        return search.depth_first_graph_search(self).state
+        return search.uniform_cost_search(self, display=True).solution()
