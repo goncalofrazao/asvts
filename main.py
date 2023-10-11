@@ -17,11 +17,27 @@ def main():
         fp = FleetProblem(open(args[1]))
 
         sol = fp.solve()
-        path = sol.path()
-        for i in path:
-            print(i.path_cost)
-        
-        # print(fp.cost(path))
+        print(sol)
+        print(fp.cost(sol))
+
+        # path = sol.path()
+        # for i in path:
+        #     print(i.state.requests)
+        # print()
+        # print('Solution')
+        # for i in solution:
+        #     print(i)
+        # print()
+        # print('Cost')
+        # print(fp.cost(solution))
+        # print()
+        # print('Requests')
+        # for i in fp.requests:
+        #     print(i)
+        # print()
+        # print('Matrix')
+        # for line in fp.matrix:
+        #     print(line)
 
     if len(args) == 3:
         list = read_solution(open(args[1]))

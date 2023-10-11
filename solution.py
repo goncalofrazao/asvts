@@ -240,7 +240,6 @@ class FleetProblem(search.Problem):
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][2]
-                    occupation[car] -= self.requests[i][3]
         
         for i in picks:
             for v in range(self.V):
@@ -265,4 +264,4 @@ class FleetProblem(search.Problem):
             return c + self.get_action_time(action) - state1.requests[request][1] - self.get_trip_time(action)
 
     def solve(self):
-        return search.uniform_cost_search(self, display=False)
+        return search.uniform_cost_search(self, display=True).solution()
