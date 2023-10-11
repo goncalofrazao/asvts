@@ -17,12 +17,16 @@ def main():
         fp = FleetProblem(open(args[1]))
 
         sol = fp.solve()
-        print(sol)
         print(fp.cost(sol))
 
+        # solution = sol.solution()
         # path = sol.path()
         # for i in path:
         #     print(i.state.requests)
+        # print()
+        # print('Path')
+        # for i in path:
+        #     print(i.path_cost)
         # print()
         # print('Solution')
         # for i in solution:

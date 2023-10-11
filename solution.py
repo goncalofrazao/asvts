@@ -230,17 +230,17 @@ class FleetProblem(search.Problem):
                 t = r[1]
                 car = r[2]
                 drops.append((i, car))
+                occupation[car] += self.requests[i][3]
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][1]
-                    occupation[car] += self.requests[i][3]
             else:
                 t = r[1]
                 car = r[2]
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][2]
-        
+
         for i in picks:
             for v in range(self.V):
                 if occupation[v] + self.requests[i][3] <= self.vehicles[v]:
