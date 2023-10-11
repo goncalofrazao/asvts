@@ -41,38 +41,18 @@ Todo:
 
 import search
 
-class Vehicle:
-    def __init__(self, ocuppation=0, time=0, position=0):
-        self.ocuppation = ocuppation
-        self.time = time
-        self.position = position
-
-    def copy(self):
-        return Vehicle(self.ocuppation, self.time, self.position)
-    
-    def update(self, ocuppation, time, position):
-        self.ocuppation += ocuppation
-        self.time = time
-        self.position = position
-
 class State:
-    def __init__(self, picks, drops, vehicles):
-        self.picks = picks
-        self.drops = drops
-        self.vehicles = vehicles
+    def __init__(self, requests):
+        self.requests = requests
 
     def __lt__(self, other):
         return True
     
     def __eq__(self, other):
-        picks1 = sorted(self.picks)
-        drops1 = sorted(self.drops)
-        picks2 = sorted(other.picks)
-        drops2 = sorted(other.drops)
-        return picks1 == picks2 and drops1 == drops2
+        return self.requests == other.requests
     
     def __hash__(self):
-        return hash((tuple(sorted(self.picks)), tuple(sorted(self.drops))))
+        return hash(tuple(self.requests))
 
 # class myNode(search.Node):
     
@@ -144,8 +124,8 @@ class FleetProblem(search.Problem):
                 v = self.V
         
         self.matrix_triangulation()
-        self.initial = State(tuple(i for i in range(self.R)), tuple(), [Vehicle() for i in range(self.V)])
-    
+        self.initial = State([(0,) for i in range(len(self.requests))])
+
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
         matrix with the values from the upper triangle.
@@ -225,53 +205,64 @@ class FleetProblem(search.Problem):
         return cost
     
     def result(self, state, action):
+        car = action[1]
         request = action[2]
-        vehicle = action[1]
-        
-        if action[0] == 'Pickup':
-            picks = tuple(i for i in state.picks if i != request)
-            drops = state.drops + ((request, vehicle, action[3]),)
-            vehicles = state.vehicles.copy()
-            occupation = state.vehicles[vehicle].ocuppation + self.requests[request][3]
-            vehicles[vehicle] = Vehicle(occupation , action[3], self.requests[request][1])
-            return State(picks, drops, vehicles)
-        elif action[0] == 'Dropoff':
-            drops = tuple(i for i in state.drops if i[0] != request)
-            vehicles = state.vehicles.copy()
-            occupation = state.vehicles[vehicle].ocuppation - self.requests[request][3]
-            vehicles[vehicle] = Vehicle(occupation, action[3], self.requests[request][2])
-            return State(state.picks, drops, vehicles)
-        return None
+        time = action[3]
+        requests = state.requests.copy()
+        if requests[request][0] == 0:
+            requests[request] = (1, time, car)
+        elif requests[request][0] == 1:
+            requests[request] = (2, time, car)
+        return State(requests)
     
     def actions(self, state):
         actions = []
+        picks = []
+        drops = []
+        pos = [0] * self.V
+        time = [0] * self.V
+        occupation = [0] * self.V
+        for i, r in enumerate(state.requests):
+            s = r[0]
+            if s == 0:
+                picks.append(i)
+            elif s == 1:
+                t = r[1]
+                car = r[2]
+                drops.append((i, car))
+                if t > time[car]:
+                    time[car] = t
+                    pos[car] = self.requests[i][1]
+                    occupation[car] += self.requests[i][3]
+            else:
+                t = r[1]
+                car = r[2]
+                if t > time[car]:
+                    time[car] = t
+                    pos[car] = self.requests[i][2]
+                    occupation[car] -= self.requests[i][3]
         
-        for r in state.drops:
-            request = self.requests[r[0]]
-            vehicle = state.vehicles[r[1]]
-            time = vehicle.time + self.matrix[vehicle.position][request[2]]
-            actions.append(('Dropoff', r[1], r[0], time))
-        for i, vehicle in enumerate(state.vehicles):
-            for r in state.picks:
-                request = self.requests[r]
-                if vehicle.ocuppation + request[3] <= self.vehicles[i]:
-                    time = vehicle.time + self.matrix[vehicle.position][request[1]]
-                    actions.append(('Pickup', i, r, time if time > request[0] else request[0]))
+        for i in picks:
+            for v in range(self.V):
+                if occupation[v] + self.requests[i][3] <= self.vehicles[v]:
+                    t = time[v] + self.matrix[pos[v]][self.requests[i][1]]
+                    actions.append(('Pickup', v, i, t if t >= self.requests[i][0] else self.requests[i][0]))
+
+        for i, v in drops:
+            t = time[v] + self.matrix[pos[v]][self.requests[i][2]]
+            actions.append(('Dropoff', v, i, t))
+        
         return actions
     
     def goal_test(self, state):
-        return not state.picks and not any(state.drops)
+        return all([r[0] == 2 for r in state.requests])
 
     def path_cost(self, c, state1, action, state2):
+        request = action[2]
         if not self.is_dropoff(action):
             return c + self.get_action_time(action) - self.get_request_time(action)
         else:
-            pickup_time = 0
-            for i in state1.drops:
-                if i[0] == action[2]:
-                    pickup_time = i[2]
-                    break
-            return c + self.get_action_time(action) - pickup_time - self.get_trip_time(action)
+            return c + self.get_action_time(action) - state1.requests[request][1] - self.get_trip_time(action)
 
     def solve(self):
         return search.uniform_cost_search(self, display=True).solution()
