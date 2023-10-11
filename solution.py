@@ -40,6 +40,7 @@ Todo:
 """
 
 import search
+from decimal import Decimal
 
 class Vehicle:
     def __init__(self, ocuppation=0, time=0, position=0):
@@ -112,11 +113,11 @@ class FleetProblem(search.Problem):
             # Parse the input file line by line
             if p > 0:
                 # Read p lines with matrix distances
-                self.matrix[self.P - p - 1] = [0] * (self.P - p) + [float(x) for x in line.split()]
+                self.matrix[self.P - p - 1] = [0] * (self.P - p) + [Decimal(x) for x in line.split()]
                 p -= 1
             elif r > 0:
                 # Read r lines of requests
-                self.requests.append([float(line.split()[0])] + [int(x) for x in line.split()[1:]])
+                self.requests.append([Decimal(line.split()[0])] + [int(x) for x in line.split()[1:]])
                 r -= 1
             elif v > 0:
                 # Read v lines of vehicle capacities
