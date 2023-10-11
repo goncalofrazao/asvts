@@ -16,9 +16,12 @@ def main():
     if len(args) == 2:
         fp = FleetProblem(open(args[1]))
 
-        path = fp.solve()
-        print(path)
-        print(fp.cost(path))
+        sol = fp.solve()
+        path = sol.path()
+        for i in path:
+            print(i.path_cost)
+        
+        # print(fp.cost(path))
 
     if len(args) == 3:
         list = read_solution(open(args[1]))
