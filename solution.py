@@ -40,7 +40,6 @@ Todo:
 """
 
 import search
-from decimal import Decimal
 
 class Vehicle:
     def __init__(self, ocuppation=0, time=0, position=0):
@@ -63,7 +62,7 @@ class State:
         self.vehicles = vehicles
 
     def __lt__(self, other):
-        return len(self.picks) < len(other.picks)
+        return True
     
     def __eq__(self, other):
         picks1 = sorted(self.picks)
@@ -74,6 +73,13 @@ class State:
     
     def __hash__(self):
         return hash((tuple(sorted(self.picks)), tuple(sorted(self.drops))))
+
+# class myNode(search.Node):
+    
+#     def __eq__(self, other):
+#         return sorted(self.solution()) == sorted(other.solution())
+
+# search.Node = myNode
 
 class FleetProblem(search.Problem):
     
@@ -225,13 +231,15 @@ class FleetProblem(search.Problem):
         if action[0] == 'Pickup':
             picks = tuple(i for i in state.picks if i != request)
             drops = state.drops + ((request, vehicle, action[3]),)
-            vehicles = [i.copy() for i in state.vehicles]
-            vehicles[vehicle].update(self.requests[request][3], action[3], self.requests[request][1])
+            vehicles = state.vehicles.copy()
+            occupation = state.vehicles[vehicle].ocuppation + self.requests[request][3]
+            vehicles[vehicle] = Vehicle(occupation , action[3], self.requests[request][1])
             return State(picks, drops, vehicles)
         elif action[0] == 'Dropoff':
             drops = tuple(i for i in state.drops if i[0] != request)
-            vehicles = [i.copy() for i in state.vehicles]
-            vehicles[vehicle].update(-self.requests[request][3], action[3], self.requests[request][2])
+            vehicles = state.vehicles.copy()
+            occupation = state.vehicles[vehicle].ocuppation - self.requests[request][3]
+            vehicles[vehicle] = Vehicle(occupation, action[3], self.requests[request][2])
             return State(state.picks, drops, vehicles)
         return None
     
