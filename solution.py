@@ -49,7 +49,7 @@ class State:
         return True
     
     def __eq__(self, other):
-        return self.requests == other.requests
+        return all(x[0:2] == y[0:2] for x, y in zip(self.requests, other.requests))
     
     def __hash__(self):
         return hash(tuple(self.requests))
@@ -124,7 +124,7 @@ class FleetProblem(search.Problem):
                 v = self.V
         
         self.matrix_triangulation()
-        self.initial = State([(0,) for i in range(len(self.requests))])
+        self.initial = State([(0,-1,) for i in range(len(self.requests))])
 
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
