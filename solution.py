@@ -265,4 +265,4 @@ class FleetProblem(search.Problem):
             return c + self.get_action_time(action) - state1.requests[request][1] - self.get_trip_time(action)
 
     def solve(self):
-        return search.uniform_cost_search(self, display=True).solution()
+        return search.uniform_cost_search(self, display=False)
