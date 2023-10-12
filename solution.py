@@ -34,12 +34,89 @@ Attributes:
     vehicles (list): A list of integers representing the capacities of the vehicles
 
 Todo:
-    * Assignment #2
     * Assignment #3
 
 """
 
 import search
+import utils
+
+class Heap(utils.PriorityQueue):
+    def __init__(self, order='min', f=lambda x: x):
+        self.heap = []
+        self.position = {}
+        self.free = 0
+        if order == 'min':
+            self.f = f
+        elif order == 'max':  # now item with max f(x)
+            self.f = lambda x: -f(x)  # will be popped first
+        else:
+            raise ValueError("Order must be either 'min' or 'max'.")
+
+    def append(self, key):
+        self.heap.append(key)
+        self.position[key] = self.free
+        self.free += 1
+        self._fix_up(self.free - 1)
+
+    def pop(self):
+        if self.free == 1:
+            self.free = 0
+            key = self.heap.pop()
+            self.position.pop(key)
+            return key
+        if self.free > 1:
+            i, j = 0, self.free - 1
+            self.position[self.heap[i]], self.position[self.heap[j]] = j, i
+            self.heap[i], self.heap[j] = self.heap[j], self.heap[i]
+            key = self.heap.pop()
+            self.position.pop(key)
+            self.free -= 1
+            self._fix_down(0)
+            return key
+        else:
+            raise Exception('Trying to pop from empty heap.')
+
+    def __len__(self):
+        return self.free
+    
+    def __contains__(self, key):
+        return key in self.position
+    
+    def __getitem__(self, key):
+        return self.position[key]
+    
+    def __delitem__(self, key):
+        i, j = self.position[key], self.free - 1
+        self.position[self.heap[i]], self.position[self.heap[j]] = j, i
+        self.heap[i], self.heap[j] = self.heap[j], self.heap[i]
+
+        key = self.heap.pop()
+        self.position.pop(key)
+        self.free -= 1
+
+        self._fix_down(i)
+
+    def _fix_up(self, idx):
+        while idx > 0 and self.f(self.heap[idx]) < self.f(self.heap[(idx - 1) // 2]):
+            self.position[self.heap[idx]] = (idx - 1) // 2
+            self.position[self.heap[(idx - 1) // 2]] = idx
+            self.heap[idx], self.heap[(idx - 1) // 2] = self.heap[(idx - 1) // 2], self.heap[idx]
+            idx = (idx - 1) // 2
+
+    def _fix_down(self, idx):
+        while idx * 2 + 1 < self.free:
+            child = 2 * idx + 1
+            if child + 1 < self.free and self.f(self.heap[child + 1]) < self.f(self.heap[child]):
+                child += 1
+            if self.f(self.heap[child]) < self.f(self.heap[idx]):
+                self.position[self.heap[idx]], self.position[self.heap[child]] = child, idx
+                self.heap[idx], self.heap[child] = self.heap[child], self.heap[idx]
+            else:
+                break
+            idx = child
+
+search.PriorityQueue = Heap
 
 class State:
     def __init__(self, requests):
@@ -49,17 +126,10 @@ class State:
         return True
     
     def __eq__(self, other):
-        return all(x[0:2] == y[0:2] for x, y in zip(self.requests, other.requests))
+        return self.requests == other.requests
     
     def __hash__(self):
         return hash(tuple(self.requests))
-
-# class myNode(search.Node):
-    
-#     def __eq__(self, other):
-#         return sorted(self.solution()) == sorted(other.solution())
-
-# search.Node = myNode
 
 class FleetProblem(search.Problem):
     
@@ -208,7 +278,7 @@ class FleetProblem(search.Problem):
         car = action[1]
         request = action[2]
         time = action[3]
-        requests = state.requests.copy()
+        requests = [i for i in state.requests]
         if requests[request][0] == 0:
             requests[request] = (1, time, car)
         elif requests[request][0] == 1:
