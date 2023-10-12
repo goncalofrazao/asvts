@@ -116,20 +116,7 @@ class Heap(utils.PriorityQueue):
                 break
             idx = child
 
-search.PriorityQueue = Heap
-
-class State:
-    def __init__(self, requests):
-        self.requests = requests
-
-    def __lt__(self, other):
-        return True
-    
-    def __eq__(self, other):
-        return self.requests == other.requests
-    
-    def __hash__(self):
-        return hash(tuple(self.requests))
+# search.PriorityQueue = Heap
 
 class FleetProblem(search.Problem):
     
@@ -194,7 +181,7 @@ class FleetProblem(search.Problem):
                 v = self.V
         
         self.matrix_triangulation()
-        self.initial = State([(0,-1,) for i in range(len(self.requests))])
+        self.initial = tuple((0,) for _ in range(len(self.requests)))
 
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
@@ -278,12 +265,8 @@ class FleetProblem(search.Problem):
         car = action[1]
         request = action[2]
         time = action[3]
-        requests = [i for i in state.requests]
-        if requests[request][0] == 0:
-            requests[request] = (1, time, car)
-        elif requests[request][0] == 1:
-            requests[request] = (2, time, car)
-        return State(requests)
+        requests = state[:request] + (((1, time, car,),) if state[request][0] == 0 else ((2, time, car,),)) + state[request + 1:]
+        return requests
     
     def actions(self, state):
         actions = []
@@ -292,7 +275,7 @@ class FleetProblem(search.Problem):
         pos = [0] * self.V
         time = [0] * self.V
         occupation = [0] * self.V
-        for i, r in enumerate(state.requests):
+        for i, r in enumerate(state):
             s = r[0]
             if s == 0:
                 picks.append(i)
@@ -324,14 +307,14 @@ class FleetProblem(search.Problem):
         return actions
     
     def goal_test(self, state):
-        return all([r[0] == 2 for r in state.requests])
+        return all([r[0] == 2 for r in state])
 
     def path_cost(self, c, state1, action, state2):
         request = action[2]
         if not self.is_dropoff(action):
             return c + self.get_action_time(action) - self.get_request_time(action)
         else:
-            return c + self.get_action_time(action) - state1.requests[request][1] - self.get_trip_time(action)
+            return c + self.get_action_time(action) - state1[request][1] - self.get_trip_time(action)
 
     def solve(self):
         return search.uniform_cost_search(self, display=True).solution()
