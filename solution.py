@@ -12,7 +12,8 @@ __status__ = "Assignment 1: Finished"
 
 """
 This module contains a class that represents a fleet problem and provides methods 
-for loading a problem instance from a file and computing the cost of a solution.
+for loading a problem instance from a file, computing the cost of a solution, 
+auxiliar methods for the search algorithms, and a method for solving the problem.
 
 Example usage:
     from solution import FleetProblem
@@ -25,6 +26,9 @@ Example usage:
     sol = [('Dropoff', 0, 0, 60.0), ('Pickup', 0, 0, 20.0)]
     cost = fp.cost(sol)
 
+    # Solve the problem
+    sol = fp.solve()
+
 Attributes:
     P (int): The number of points in the problem instance
     R (int): The number of requests in the problem instance
@@ -34,8 +38,7 @@ Attributes:
     vehicles (list): A list of integers representing the capacities of the vehicles
 
 Todo:
-    * Assignment #3
-
+    * Assignment #3: Really good heuristic incoming for informed search mega boosted algorithms
 """
 
 import search
@@ -123,6 +126,21 @@ class FleetProblem(search.Problem):
     def __init__(self, fh=None):
         """Constructor method that initializes the attributes of the FleetProblem 
         object and loads a problem instance from file object fh if it is provided.
+    
+        Usage:
+            If there is a file object, this must be opened in read mode and the file must be
+            formatted as follows without a specific order of the sections:
+                P <number of points>
+                <matrix of distances>
+                R <number of requests>
+                <requests>
+                V <number of vehicles>
+                <vehicle capacities>
+                Where:
+                    <matrix of distances> is a upper triangular matrix of floats or integers
+                    <requests> are represented by a line with the following format:
+                        <request time> <pickup point> <dropoff point> <number of passengers>
+                    <vehicle capacities> are represented by a line with a single integer
 
         Args:
             fh (file object): File object containing the problem instance.
@@ -131,10 +149,18 @@ class FleetProblem(search.Problem):
         self.P = 0
         self.R = 0
         self.V = 0
+        # matrix is a square symetric matrix
+        # where matrix[i][j] is the distance between points i and j
         self.matrix = []
+        # request format: (<request time>, <pickup point>, <dropoff point>, <number of passengers>)
         self.requests = []
+        # each vehicle is represented by its capacity
         self.vehicles = []
-        self.initial = None
+        # initial state is a tuple of tuples
+        # where each tuple represents a request state
+        # format: (<request state>) if request have not been picked up
+        #         (<request state>, <time>, <vehicle>) any other case
+        self.initial = ()
         if fh:
             self.load(fh)
 
@@ -143,7 +169,22 @@ class FleetProblem(search.Problem):
 
         Args:
             fh (file object): File object containing the problem instance.
-
+        
+        Usage:
+            The file object must be opened in read mode and the file must be
+            formatted as follows without a specific order of the sections:
+                P <number of points>
+                <matrix of distances>
+                R <number of requests>
+                <requests>
+                V <number of vehicles>
+                <vehicle capacities>
+                Where:
+                    <matrix of distances> is a upper triangular matrix of floats or integers
+                    <requests> are represented by a line with the following format:
+                        <request time> <pickup point> <dropoff point> <number of passengers>
+                    <vehicle capacities> are represented by a line with a single integer
+                
         Side effects:
             Initializes the attributes of the FleetProblem object.
 
@@ -201,6 +242,10 @@ class FleetProblem(search.Problem):
         Args:
             action (tuple): A tuple representing an action.
 
+        Usage:
+            The action format is as follows:    
+                (<type of action>, <vehicle>, <request>, <action time>)
+
         Returns:
             float: The dropoff time of the action.
 
@@ -212,6 +257,10 @@ class FleetProblem(search.Problem):
 
         Args:
             action (tuple): A tuple representing an action.
+        
+        Usage:
+            The action format is as follows:    
+                (<type of action>, <vehicle>, <request>, <action time>)
 
         Returns:
             bool: True if the action is a dropoff action, False otherwise.
@@ -224,6 +273,10 @@ class FleetProblem(search.Problem):
 
         Args:
             action (tuple): A tuple representing an action.
+        
+        Usage:
+            The action format is as follows:    
+                (<type of action>, <vehicle>, <request>, <action time>)
 
         Returns:
             float: The request time of the action.
@@ -236,6 +289,10 @@ class FleetProblem(search.Problem):
 
         Args:
             action (tuple): A tuple representing an action.
+        
+        Usage:
+            The action format is as follows:    
+                (<type of action>, <vehicle>, <request>, <action time>)
 
         Returns:
             float: The trip time of the action.
@@ -250,6 +307,10 @@ class FleetProblem(search.Problem):
         Args:
             sol (list): A list of actions representing a solution.
 
+        Usage:
+            An action format is as follows:
+                (<type of action>, <vehicle>, <request>, <action time>)
+
         Returns:
             float: The cost of the solution.
 
@@ -262,6 +323,25 @@ class FleetProblem(search.Problem):
         return cost
     
     def result(self, state, action):
+        """
+        Returns the state that results from executing action in state.
+        The action must be one of self.actions(state).
+        
+        Args:
+            state (tuple): A tuple representing a state.
+            action (tuple): A tuple representing an action.
+            
+        Usage:
+            The action format is as follows:
+                (<type of action>, <vehicle>, <request>, <action time>)
+            The state is a tuple where each position is formated as follows:
+                (<request state>) if request have not been picked up
+                (<request state>, <time>, <vehicle>) any other case
+                
+        Returns:
+            tuple: The resulting state.
+            
+        """
         car = action[1]
         request = action[2]
         time = action[3]
@@ -269,23 +349,49 @@ class FleetProblem(search.Problem):
         return requests
     
     def actions(self, state):
-        picks = [-1] * self.R
-        drops = [-1] * self.R
-        picks_free = 0
-        drops_free = 0
+        """
+        Returns the actions that can be executed in the given state.
+        
+        Args:
+            state (tuple): A tuple representing a state.
+            
+        Usage:
+            The state is a tuple where each position is formated as follows:
+                (<request state>) if request have not been picked up
+                (<request state>, <time>, <vehicle>) any other case
+            The return list positions are actions that are formated as follows:
+                (<type of action>, <vehicle>, <request>, <action time>)
+        
+        Returns:
+            list: A list of actions that can be executed in the given state.
+        """
+        # Actions are formated as follows:
+        # (<type of action>, <vehicle>, <request>, <action time>)
+        actions = []
+        # Picks is a list of requests that have not been picked up
+        picks = []
+        # Drops is a list of tuples (request, vehicle) where request has been picked up and not dropped off
+        drops = []
+        # Pos is a list of positions of the vehicles
         pos = [0] * self.V
+        # Time is a list of times of the vehicles
         time = [0] * self.V
+        # Occupation is a list of the occupation of the vehicles
         occupation = [0] * self.V
+
         for i, r in enumerate(state):
             s = r[0]
             if s == 0:
-                picks[picks_free] = i
-                picks_free += 1
+                # Add request to picks list
+                picks.append(i)
             elif s == 1:
+                # Add request to drops list
                 t = r[1]
                 car = r[2]
-                drops[drops_free] = (i, car)
+                drops.append((i, car))
+                # Update occupation
                 occupation[car] += self.requests[i][3]
+                # Update time and position (the vehicle position and time are conditioned by last action executed)
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][1]
@@ -293,34 +399,68 @@ class FleetProblem(search.Problem):
             else:
                 t = r[1]
                 car = r[2]
+                # Update time and position (the vehicle position and time are conditioned by last action executed)
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][2]
-        
-        actions = [-1] * (picks_free * self.V + drops_free)
-        actionsi = 0
-        
-        for i in range(picks_free):
-            picksi = picks[i]
+
+        for i in picks:
+            # Add pickup action for each vehicle that can pick up the request
             for v in range(self.V):
-                if occupation[v] + self.requests[picksi][3] <= self.vehicles[v]:
-                    t = time[v] + self.matrix[pos[v]][self.requests[picksi][1]]
-                    actions[actionsi] = ('Pickup', v, picksi, t if t >= self.requests[picksi][0] else self.requests[picksi][0])
-                    actionsi += 1
+                # Vehicle must have enough capacity to pick up the request
+                if occupation[v] + self.requests[i][3] <= self.vehicles[v]:
+                    t = time[v] + self.matrix[pos[v]][self.requests[i][1]]
+                    # The pickup time must be equal or greater than the request time
+                    actions.append(('Pickup', v, i, max(t, self.requests[i][0])))
 
-        for i in range(drops_free):
-            dropsi, v = drops[i]
-            t = time[v] + self.matrix[pos[v]][self.requests[dropsi][2]]
-
-            actions[actionsi] = ('Dropoff', v, dropsi, t)
-            actionsi += 1
+        # Add dropoff action to the actions list for each request that has been picked up and not dropped off
+        for i, v in drops:
+            t = time[v] + self.matrix[pos[v]][self.requests[i][2]]
+            actions.append(('Dropoff', v, i, t))
         
         return actions[:actionsi]
     
     def goal_test(self, state):
+        """
+        Returns True if state is a goal state, False otherwise.
+
+        Args:
+            state (tuple): A tuple representing a state.
+
+        Usage:
+            The state is a tuple where each position is formated as follows:
+                (<request state>) if request have not been picked up
+                (<request state>, <time>, <vehicle>) any other case
+            A goal state is a state where all requests are on state 2.
+
+        Returns:
+            bool: True if state is a goal state, False otherwise.
+        """
         return all([r[0] == 2 for r in state])
 
     def path_cost(self, c, state1, action, state2):
+        """
+        Returns the cost of a solution path that arrives at state2 from state1 via action,
+        assuming cost c to get up to state1.
+        The action must be one of self.actions(state1).
+        
+        Args:
+            c (float): The cost to get up to state1.
+            state1 (tuple): A tuple representing a state.
+            action (tuple): A tuple representing an action.
+            state2 (tuple): A tuple representing a state.
+
+        Usage:
+            The action format is as follows:
+                (<type of action>, <vehicle>, <request>, <action time>)
+            The state is a tuple where each position is formated as follows:
+                (<request state>) if request have not been picked up
+                (<request state>, <time>, <vehicle>) any other case
+
+        Returns:
+            float: The cost of a solution path that arrives at state2 from state1 via action,
+            assuming cost c to get up to state1.
+        """
         request = action[2]
         if not self.is_dropoff(action):
             return c + self.get_action_time(action) - self.get_request_time(action)
@@ -328,4 +468,11 @@ class FleetProblem(search.Problem):
             return c + self.get_action_time(action) - state1[request][1] - self.get_trip_time(action)
 
     def solve(self):
+        """
+        Returns a solution to the problem.
+        Uses the uniform_cost_search method from the search module.
+        
+        Returns:
+            list: A list of actions representing a solution to the problem.
+        """
         return search.uniform_cost_search(self, display=True).solution()
