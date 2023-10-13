@@ -410,7 +410,7 @@ class FleetProblem(search.Problem):
                 if occupation[v] + self.requests[i][3] <= self.vehicles[v]:
                     t = time[v] + self.matrix[pos[v]][self.requests[i][1]]
                     # The pickup time must be equal or greater than the request time
-                    actions.append(('Pickup', v, i, max(t, self.requests[i][0])))
+                    actions.append(('Pickup', v, i, t if t >= self.requests[i][0] else self.requests[i][0]))
 
         # Add dropoff action to the actions list for each request that has been picked up and not dropped off
         for i, v in drops:
