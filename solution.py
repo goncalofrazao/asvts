@@ -395,7 +395,6 @@ class FleetProblem(search.Problem):
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][1]
-                drops_free += 1
             else:
                 t = r[1]
                 car = r[2]
@@ -418,7 +417,7 @@ class FleetProblem(search.Problem):
             t = time[v] + self.matrix[pos[v]][self.requests[i][2]]
             actions.append(('Dropoff', v, i, t))
         
-        return actions[:actionsi]
+        return actions
     
     def goal_test(self, state):
         """
