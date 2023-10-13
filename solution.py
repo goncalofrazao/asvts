@@ -269,42 +269,53 @@ class FleetProblem(search.Problem):
         return requests
     
     def actions(self, state):
-        actions = []
-        picks = []
-        drops = []
+        picks = [-1] * self.R
+        drops = [-1] * self.R
+        picks_free = 0
+        drops_free = 0
         pos = [0] * self.V
         time = [0] * self.V
         occupation = [0] * self.V
         for i, r in enumerate(state):
             s = r[0]
             if s == 0:
-                picks.append(i)
+                picks[picks_free] = i
+                picks_free += 1
             elif s == 1:
                 t = r[1]
                 car = r[2]
-                drops.append((i, car))
+                drops[drops_free] = (i, car)
                 occupation[car] += self.requests[i][3]
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][1]
+                drops_free += 1
             else:
                 t = r[1]
                 car = r[2]
                 if t > time[car]:
                     time[car] = t
                     pos[car] = self.requests[i][2]
-
-        for i in picks:
-            for v in range(self.V):
-                if occupation[v] + self.requests[i][3] <= self.vehicles[v]:
-                    t = time[v] + self.matrix[pos[v]][self.requests[i][1]]
-                    actions.append(('Pickup', v, i, t if t >= self.requests[i][0] else self.requests[i][0]))
-
-        for i, v in drops:
-            t = time[v] + self.matrix[pos[v]][self.requests[i][2]]
-            actions.append(('Dropoff', v, i, t))
         
-        return actions
+        actions = [-1] * (picks_free * self.V + drops_free)
+        actionsi = 0
+        
+        for i in range(picks_free):
+            picksi = picks[i]
+            for v in range(self.V):
+                if occupation[v] + self.requests[picksi][3] <= self.vehicles[v]:
+                    t = time[v] + self.matrix[pos[v]][self.requests[picksi][1]]
+                    actions[actionsi] = ('Pickup', v, picksi, t if t >= self.requests[picksi][0] else self.requests[picksi][0])
+                    actionsi += 1
+
+        for i in range(drops_free):
+            dropsi, v = drops[i]
+            t = time[v] + self.matrix[pos[v]][self.requests[dropsi][2]]
+
+            actions[actionsi] = ('Dropoff', v, dropsi, t)
+            actionsi += 1
+        
+        return actions[:actionsi]
     
     def goal_test(self, state):
         return all([r[0] == 2 for r in state])
