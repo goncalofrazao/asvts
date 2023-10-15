@@ -119,7 +119,7 @@ class Heap(utils.PriorityQueue):
                 break
             idx = child
 
-search.PriorityQueue = Heap
+# search.PriorityQueue = Heap
 
 class FleetProblem(search.Problem):
     
@@ -466,18 +466,6 @@ class FleetProblem(search.Problem):
         else:
             return c + self.get_action_time(action) - state1[request][1] - self.get_trip_time(action)
 
-    def h(self, node):
-        state = node.parent.state
-        neighbour = self.requests[node.action[2]][2 if self.is_dropoff(node.action) else 1]
-        car = node.action[1]
-        time = 0
-        car_position = 0
-        for i, r in enumerate(state):
-            if r[0] > 0 and r[2] == car and r[1] > time:
-                time = r[1]
-                car_position = self.requests[i][r[0]]
-        return self.matrix[car_position][neighbour]
-
     def solve(self):
         """
         Returns a solution to the problem.
@@ -486,5 +474,4 @@ class FleetProblem(search.Problem):
         Returns:
             list: A list of actions representing a solution to the problem.
         """
-        return search.astar_search(self, self.h, display=True).solution()
-        # return search.uniform_cost_search(self, display=True).solution()
+        return search.uniform_cost_search(self, display=True).solution()

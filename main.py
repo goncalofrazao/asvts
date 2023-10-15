@@ -14,11 +14,10 @@ def read_solution(f):
 def main():
     args = sys.argv
     if len(args) == 2:
-        fp = FleetProblem()
-        fp.load(open(args[1]))
+        fp = FleetProblem(open(args[1]))
 
         sol = fp.solve()
-        print(fp.cost(sol), sol)
+        print(fp.cost(sol))
 
     if len(args) == 3:
         list = read_solution(open(args[1]))

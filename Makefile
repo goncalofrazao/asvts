@@ -14,6 +14,7 @@ costs:
 test:
 	for file in ${PUBLIC2_FILES}; do $(PYTHON) main.py $$file; done
 
+
 time:
 	for file in ${PUBLIC2_FILES}; do time $(PYTHON) main.py $$file; done
 
