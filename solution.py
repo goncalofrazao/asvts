@@ -478,4 +478,3 @@ class FleetProblem(search.Problem):
             list: A list of actions representing a solution to the problem.
         """
         return search.astar_search(self, self.h, display=True).solution()
-        # return search.uniform_cost_search(self, display=True).solution()
