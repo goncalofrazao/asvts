@@ -43,6 +43,7 @@ Todo:
 
 import search
 import utils
+import itertools
 
 class Heap(utils.PriorityQueue):
     def __init__(self, order='min', f=lambda x: x):
@@ -120,6 +121,10 @@ class Heap(utils.PriorityQueue):
             idx = child
 
 search.PriorityQueue = Heap
+
+class State(tuple):
+    def __lt__(self, other):
+        return False
 
 class FleetProblem(search.Problem):
     
@@ -222,7 +227,7 @@ class FleetProblem(search.Problem):
                 v = self.V
         
         self.matrix_triangulation()
-        self.initial = tuple((0,) for _ in range(len(self.requests)))
+        self.initial = State((0,) for _ in range(len(self.requests)))
 
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
@@ -345,7 +350,7 @@ class FleetProblem(search.Problem):
         car = action[1]
         request = action[2]
         time = action[3]
-        requests = state[:request] + (((1, time, car,),) if state[request][0] == 0 else ((2, time, car,),)) + state[request + 1:]
+        requests = State(state[:request] + (((1, time, car,),) if state[request][0] == 0 else ((2, time, car,),)) + state[request + 1:])
         return requests
     
     def actions(self, state):
@@ -466,8 +471,65 @@ class FleetProblem(search.Problem):
         else:
             return c + self.get_action_time(action) - state1[request][1] - self.get_trip_time(action)
 
+    def get_best_cost(self, state, car, requests, position, time):
+        best_cost = float('inf')
+        final_p = position
+        final_t = time
+        for perm in itertools.permutations(requests):
+            copy = state
+            p_copy = position
+            t_copy = time
+            c_copy = 0
+            for i in perm:
+                t_copy += self.matrix[p_copy][self.requests[i][2]]
+                p_copy = self.requests[i][2]
+                action = ('Dropoff', car, i, t_copy)
+                aux = self.result(copy, action)
+                c_copy = self.path_cost(c_copy, copy, action, aux)
+                copy = aux
+            if c_copy < best_cost:
+                best_cost = c_copy
+                final_p = p_copy
+                final_t = t_copy
+        return best_cost, (final_t, final_p, ())
+    
     def h(self, node):
-        return 0
+        cost_left = 0
+        state = node.state
+        cars = {}
+        for i, r in enumerate(state):
+            if r[0] == 1:
+                car = r[2]
+                if car not in cars:
+                    cars[car] = (r[1], self.requests[i][1], (i,))
+                elif r[1] > cars[r[2]][0]:
+                    cars[car] = (r[1], self.requests[i][1], cars[car][2] + (i,))
+                else:
+                    cars[car] = (cars[car][0], cars[car][1], cars[car][2] + (i,))
+            elif r[0] == 2:
+                car = r[2]
+                if car not in cars:
+                    cars[car] = (r[1], self.requests[i][2], ())
+                elif r[1] > cars[r[2]][0]:
+                    cars[car] = (r[1], self.requests[i][2], cars[car][2])
+        
+        for i in cars.keys():
+            car = cars[i]
+            if car[2]:
+                c_aux, cars[i] = self.get_best_cost(state, i, car[2], car[1], car[0])
+                cost_left += c_aux
+        
+        for i, r in enumerate(state):
+            if r[0] == 0:
+                best_arr_time = self.matrix[0][self.requests[i][1]]
+                for c in cars.keys():
+                    car = cars[c]
+                    arr_time = car[0] + self.matrix[car[1]][self.requests[i][1]]
+                    if arr_time < best_arr_time:
+                        best_arr_time = arr_time
+                cost_left += max(best_arr_time - self.requests[i][0], 0)
+        
+        return cost_left
 
     def solve(self):
         """
@@ -477,4 +539,4 @@ class FleetProblem(search.Problem):
         Returns:
             list: A list of actions representing a solution to the problem.
         """
-        return search.astar_search(self, self.h, display=True).solution()
+        return search.astar_search(self, h=self.h, display=True).solution()
