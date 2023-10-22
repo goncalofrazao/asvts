@@ -58,8 +58,9 @@ class Heap(utils.PriorityQueue):
             raise ValueError("Order must be either 'min' or 'max'.")
 
     def append(self, key):
-        self.heap.append(key)
-        self.position[key] = self.free
+        item = (self.f(key), key)
+        self.heap.append(item)
+        self.position[item] = self.free
         self.free += 1
         self._fix_up(self.free - 1)
 
@@ -68,7 +69,7 @@ class Heap(utils.PriorityQueue):
             self.free = 0
             key = self.heap.pop()
             self.position.pop(key)
-            return key
+            return key[1]
         if self.free > 1:
             i, j = 0, self.free - 1
             self.position[self.heap[i]], self.position[self.heap[j]] = j, i
@@ -77,7 +78,7 @@ class Heap(utils.PriorityQueue):
             self.position.pop(key)
             self.free -= 1
             self._fix_down(0)
-            return key
+            return key[1]
         else:
             raise Exception('Trying to pop from empty heap.')
 
@@ -85,24 +86,25 @@ class Heap(utils.PriorityQueue):
         return self.free
     
     def __contains__(self, key):
-        return key in self.position
+        return (self.f(key), key) in self.position
     
     def __getitem__(self, key):
-        return self.position[key]
+        return self.f(key)
     
     def __delitem__(self, key):
-        i, j = self.position[key], self.free - 1
+        item = (self.f(key), key)
+        i, j = self.position[item], self.free - 1
         self.position[self.heap[i]], self.position[self.heap[j]] = j, i
         self.heap[i], self.heap[j] = self.heap[j], self.heap[i]
 
-        key = self.heap.pop()
-        self.position.pop(key)
+        item = self.heap.pop()
+        self.position.pop(item)
         self.free -= 1
 
         self._fix_down(i)
 
     def _fix_up(self, idx):
-        while idx > 0 and self.f(self.heap[idx]) < self.f(self.heap[(idx - 1) // 2]):
+        while idx > 0 and self.heap[idx] < self.heap[(idx - 1) // 2]:
             self.position[self.heap[idx]] = (idx - 1) // 2
             self.position[self.heap[(idx - 1) // 2]] = idx
             self.heap[idx], self.heap[(idx - 1) // 2] = self.heap[(idx - 1) // 2], self.heap[idx]
@@ -111,20 +113,20 @@ class Heap(utils.PriorityQueue):
     def _fix_down(self, idx):
         while idx * 2 + 1 < self.free:
             child = 2 * idx + 1
-            if child + 1 < self.free and self.f(self.heap[child + 1]) < self.f(self.heap[child]):
+            if child + 1 < self.free and self.heap[child + 1] < self.heap[child]:
                 child += 1
-            if self.f(self.heap[child]) < self.f(self.heap[idx]):
+            if self.heap[child] < self.heap[idx]:
                 self.position[self.heap[idx]], self.position[self.heap[child]] = child, idx
                 self.heap[idx], self.heap[child] = self.heap[child], self.heap[idx]
             else:
                 break
             idx = child
 
-search.PriorityQueue = Heap
+# search.PriorityQueue = Heap
 
 class State(tuple):
     def __lt__(self, other):
-        return False
+        return sum([x[0] for x in self]) > sum([x[0] for x in other])
 
 class FleetProblem(search.Problem):
     
