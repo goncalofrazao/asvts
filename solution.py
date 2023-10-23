@@ -8,7 +8,7 @@ __maintainer__ = "Gustavo Vítor"
 __email__ = "gustavovitor@tecnico.ulisboa.pt"
 __maintainer__ = "Tiago Costa"
 __email__ = "tiagoncosta@tecnico.ulisboa.pt"
-__status__ = "Assignment 1: Finished"
+__status__ = "Really good mega boosted admissible heuristic finished"
 
 """
 This module contains a class that represents a fleet problem and provides methods 
@@ -524,9 +524,10 @@ class FleetProblem(search.Problem):
                     best_arr_time = float('inf')
                 for c in cars.keys():
                     car = cars[c]
-                    arr_time = car[0] + self.matrix[car[1]][self.requests[i][1]]
-                    if arr_time < best_arr_time:
-                        best_arr_time = arr_time
+                    if car[1] + self.requests[i][3] <= self.vehicles[c]:
+                        arr_time = car[0] + self.matrix[car[1]][self.requests[i][1]]
+                        if arr_time < best_arr_time:
+                            best_arr_time = arr_time
                 cost_left += max(best_arr_time - self.requests[i][0], 0)
         
         return cost_left
