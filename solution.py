@@ -475,8 +475,6 @@ class FleetProblem(search.Problem):
 
     def get_best_cost(self, state, car, requests, position, time):
         best_cost = float('inf')
-        final_p = position
-        final_t = time
         for perm in itertools.permutations(requests):
             copy = state
             p_copy = position
@@ -491,9 +489,7 @@ class FleetProblem(search.Problem):
                 copy = aux
             if c_copy < best_cost:
                 best_cost = c_copy
-                final_p = p_copy
-                final_t = t_copy
-        return best_cost, (final_t, final_p, ())
+        return best_cost
     
     def h(self, node):
         cost_left = 0
@@ -518,12 +514,14 @@ class FleetProblem(search.Problem):
         for i in cars.keys():
             car = cars[i]
             if car[2]:
-                c_aux, cars[i] = self.get_best_cost(state, i, car[2], car[1], car[0])
-                cost_left += c_aux
+                cost_left += self.get_best_cost(state, i, car[2], car[1], car[0])
         
         for i, r in enumerate(state):
             if r[0] == 0:
-                best_arr_time = self.matrix[0][self.requests[i][1]]
+                if len(cars) < self.V:
+                    best_arr_time = self.matrix[0][self.requests[i][1]]
+                else:
+                    best_arr_time = float('inf')
                 for c in cars.keys():
                     car = cars[c]
                     arr_time = car[0] + self.matrix[car[1]][self.requests[i][1]]
