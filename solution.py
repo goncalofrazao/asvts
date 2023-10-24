@@ -230,6 +230,10 @@ class FleetProblem(search.Problem):
         
         self.matrix_triangulation()
         self.initial = State((0,) for _ in range(len(self.requests)))
+        
+        indexed_vehicles = list(enumerate(self.vehicles))
+        topR = sorted(indexed_vehicles, key=lambda x: x[1], reverse=True)[:self.R]
+        self.vehicles = {index: value for index, value in topR}
 
     def matrix_triangulation(self):
         """Fills in the lower triangle of the distance 
@@ -412,7 +416,7 @@ class FleetProblem(search.Problem):
 
         for i in picks:
             # Add pickup action for each vehicle that can pick up the request
-            for v in range(self.V):
+            for v in self.vehicles.keys():
                 # Vehicle must have enough capacity to pick up the request
                 if occupation[v] + self.requests[i][3] <= self.vehicles[v]:
                     t = time[v] + self.matrix[pos[v]][self.requests[i][1]]
@@ -539,7 +543,7 @@ class FleetProblem(search.Problem):
         
         for i, r in enumerate(state):
             if r[0] == 0:
-                if len(cars) < self.V:
+                if any([c not in cars and self.vehicles[c] >= self.requests[i][3] for c in self.vehicles.keys()]):
                     best_arr_time = self.matrix[0][self.requests[i][1]]
                 else:
                     best_arr_time = float('inf')
