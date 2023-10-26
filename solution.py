@@ -122,7 +122,7 @@ class Heap(utils.PriorityQueue):
                 break
             idx = child
 
-# search.PriorityQueue = Heap
+search.PriorityQueue = Heap
 
 class State():
     def __init__(self, req_state: tuple, cars: dict, car_set: list):
@@ -131,7 +131,7 @@ class State():
         self.car_set = car_set
     
     def __lt__(self, other):
-        return sum(i[0] for i in self.req_state) < sum(i[0] for i in other.req_state)
+        return sum(i[0] for i in self.req_state) >= sum(i[0] for i in other.req_state)
     
     def __eq__(self, other):
         return tuple(i[:2] for i in self.req_state) == tuple(i[:2] for i in other.req_state) and self.car_set == other.car_set
@@ -140,7 +140,6 @@ class State():
         return hash(tuple(i[:2] for i in self.req_state) + tuple(self.car_set))
 
 class FleetProblem(search.Problem):
-    counter = 0
 
     def __init__(self):
         self.P = 0
@@ -281,7 +280,6 @@ class FleetProblem(search.Problem):
         return cost
     
     def result(self, state: State, action):
-        FleetProblem.counter += 1
         car = action[1]
         request = action[2]
         time = action[3]
@@ -392,7 +390,6 @@ class FleetProblem(search.Problem):
                 t_copy += self.matrix[p_copy][self.requests[i][2]]
                 p_copy = self.requests[i][2]
                 action = ('Dropoff', car, i, t_copy)
-                FleetProblem.counter -= 1
                 aux = self.result(copy, action)
                 c_copy = self.path_cost(c_copy, copy, action, aux)
                 copy = aux
@@ -400,23 +397,26 @@ class FleetProblem(search.Problem):
                 best_cost = c_copy
         return best_cost
     
-    # def get_fastest_dropoff(self, cars, capacity, destination):
-    #     best_time = float('inf')
-    #     for c in cars:
-    #         car = cars[c]
-    #         if self.cars[c] >= capacity:
-    #             for perm in itertools.permutations(car[2]):
-    #                 time = car[0]
-    #                 position = car[1]
-    #                 for r in perm:
-    #                     if self.vehicles[c] - self.get_ocupation(perm) >= capacity:
-    #                         break
-    #                     time += self.matrix[position][self.requests[r][2]]
-    #                     position = self.requests[r][2]
-    #                 time += self.matrix[position][destination]
-    #                 if time < best_time:
-    #                     best_time = time
-    #     return best_time
+    def get_fastest_dropoff(self, cars, requests, capacity, destination):
+        best_time = float('inf')
+        for c in cars:
+            car = cars[c]
+            max_capacity = car[3]
+            if max_capacity >= capacity:
+                for perm in itertools.permutations(requests[c]):
+                    time = car[0]
+                    position = car[1]
+                    ocupation = car[2]
+                    for r in perm:
+                        if max_capacity - ocupation >= capacity:
+                            break
+                        time += self.matrix[position][self.requests[r][2]]
+                        position = self.requests[r][2]
+                        ocupation -= self.requests[r][3]
+                    time += self.matrix[position][destination]
+                    if time < best_time:
+                        best_time = time
+        return best_time
     
     def h(self, node):
         cost_left = 0
@@ -452,16 +452,18 @@ class FleetProblem(search.Problem):
         # fastest the capacity to pickup
         for i, r in enumerate(state.req_state):
             if r[0] == 0:
-                if state.car_set:
+                if state.car_set and self.requests[i][3] <= state.car_set[0]:
                     best_arr_time = self.matrix[0][self.requests[i][1]]
                 else:
                     best_arr_time = float('inf')
                 for c in state.cars:
                     car = state.cars[c]
-                    arr_time = car[0] + self.matrix[car[1]][self.requests[i][1]]
-                    if arr_time < best_arr_time:
-                        best_arr_time = arr_time
-                    
+                    if car[2] + self.requests[i][3] <= car[3] or (state.car_set and car[2] + self.requests[i][3] <= state.car_set[0]):
+                        arr_time = car[0] + self.matrix[car[1]][self.requests[i][1]]
+                        if arr_time < best_arr_time:
+                            best_arr_time = arr_time
+                if best_arr_time == float('inf'):
+                    best_arr_time = self.get_fastest_dropoff(state.cars, cars, self.requests[i][3], self.requests[i][1])
                 cost_left += max(best_arr_time - self.requests[i][0], 0)
 
         return cost_left
@@ -474,7 +476,20 @@ class FleetProblem(search.Problem):
         Returns:
             list: A list of actions representing a solution to the problem.
         """
-        return search.astar_search(self, h=self.h, display=True).solution()
+        last_node = search.astar_search(self, h=self.h, display=True)
+        solution_before_conversion = last_node.solution()
+        conversion = {}
+        for i in solution_before_conversion:
+            car = i[1]
+            if car not in conversion:
+                car_capacity = last_node.state.cars[car][3]
+                car_index = self.cars.index(car_capacity)
+                self.cars[car_index] = -1
+                conversion[car] = car_index
+        final_solution = []
+        for i in solution_before_conversion:
+            final_solution.append((i[0], conversion[i[1]], i[2], i[3]))
+        return final_solution
 
 def first_higher(list: list, x: int) -> int:
     for i in range(len(list)):
