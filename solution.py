@@ -230,7 +230,7 @@ class FleetProblem(search.Problem):
         
         self.matrix_triangulation()
         self.initial = State((0,) for _ in range(len(self.requests)))
-        
+
         indexed_vehicles = list(enumerate(self.vehicles))
         topR = sorted(indexed_vehicles, key=lambda x: x[1], reverse=True)[:self.R]
         self.vehicles = {index: value for index, value in topR}
@@ -520,6 +520,11 @@ class FleetProblem(search.Problem):
         cost_left = 0
         state = node.state
         cars = {}
+
+        # state = ((request_state {0: waiting pickup, 1: waiting dropoff, 2: completed}, time request got to this state, vehicle that is doing the request), ...)
+        
+        # Calculate cars positions, times and requests pending
+        # cars = {car_index: (time_of_the_car, position_of_the_car, (requests_to_dropoff,))}
         for i, r in enumerate(state):
             if r[0] == 1:
                 car = r[2]
@@ -536,11 +541,23 @@ class FleetProblem(search.Problem):
                 elif r[1] > cars[r[2]][0]:
                     cars[car] = (r[1], self.requests[i][2], cars[car][2])
         
+        # Calculate best order to dropoff requests for each car
+
+        # get_best_cost does all the permutations of the requests
+        #  to dropoff and returns the cost of the best permutation
         for i in cars.keys():
             car = cars[i]
             if car[2]:
                 cost_left += self.get_best_cost(state, i, car[2], car[1], car[0])
         
+        # Search the first car to arrive at each request and calculate the cost so far
+        
+        # The cost of each waiting pickup is the time of the request 
+        # minus the time of the first car to arrive at the pickup point
+        
+        # If no request has capacity to pickup, the get_fastest_dropoff 
+        # returns the arrival at pickup point of the car that can get 
+        # fastest the capacity to pickup
         for i, r in enumerate(state):
             if r[0] == 0:
                 if any([c not in cars and self.vehicles[c] >= self.requests[i][3] for c in self.vehicles.keys()]):
