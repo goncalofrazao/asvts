@@ -14,6 +14,7 @@ def read_solution(f):
 def main():
     args = sys.argv
     if len(args) == 2:
+        print(args[1])
         fp = FleetProblem()
         fp.load(open(args[1]))
 
