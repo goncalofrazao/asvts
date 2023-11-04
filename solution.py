@@ -124,7 +124,7 @@ class Heap(utils.PriorityQueue):
                 break
             idx = child
 
-# search.PriorityQueue = Heap
+search.PriorityQueue = Heap
 
 class State():
     """
